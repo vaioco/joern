@@ -3,6 +3,14 @@
 class BaseResultProcessor:
     def __init__(self, result):
         self.result = result
+
+        if 'properties' not in result:
+            porcodio = {}
+            for k, v in result.items():
+                porcodio[k] = [{'value': result[k], 'id': v}]
+
+            self.result['properties'] = porcodio
+
     @staticmethod
     def value(element,key):
         prop = element['properties'].get(key,[])
