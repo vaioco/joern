@@ -2,7 +2,6 @@ package tools.php.ast2cpg;
 
 import ast.ASTNode;
 import ast.NullNode;
-import ast.expressions.AndExpression;
 import ast.expressions.ArgumentList;
 import ast.expressions.ArrayIndexing;
 import ast.expressions.AssignmentExpression;
@@ -15,14 +14,11 @@ import ast.expressions.ConditionalExpression;
 import ast.expressions.Constant;
 import ast.expressions.Expression;
 import ast.expressions.ExpressionList;
-import ast.expressions.GreaterExpression;
-import ast.expressions.GreaterOrEqualExpression;
 import ast.expressions.Identifier;
 import ast.expressions.IdentifierList;
 import ast.expressions.InstanceofExpression;
 import ast.expressions.IntegerExpression;
 import ast.expressions.NewExpression;
-import ast.expressions.OrExpression;
 import ast.expressions.PostDecOperationExpression;
 import ast.expressions.PostIncOperationExpression;
 import ast.expressions.PreDecOperationExpression;
@@ -30,9 +26,7 @@ import ast.expressions.PreIncOperationExpression;
 import ast.expressions.PropertyExpression;
 import ast.expressions.StaticPropertyExpression;
 import ast.expressions.StringExpression;
-import ast.expressions.UnaryMinusExpression;
 import ast.expressions.UnaryOperationExpression;
-import ast.expressions.UnaryPlusExpression;
 import ast.expressions.Variable;
 import ast.functionDef.ParameterList;
 import ast.logical.statements.CompoundStatement;
@@ -56,7 +50,6 @@ import ast.php.expressions.ListExpression;
 import ast.php.expressions.PrintExpression;
 import ast.php.expressions.ReferenceExpression;
 import ast.php.expressions.ShellExecExpression;
-import ast.php.expressions.SilenceExpression;
 import ast.php.expressions.UnpackExpression;
 import ast.php.expressions.YieldExpression;
 import ast.php.expressions.YieldFromExpression;
@@ -196,12 +189,6 @@ public class PHPCSVEdgeInterpreter implements CSVRowInterpreter
 			case PHPCSVNodeTypes.TYPE_UNPACK:
 				errno = handleUnpack((UnpackExpression)startNode, endNode, childnum);
 				break;
-			case PHPCSVNodeTypes.TYPE_UNARY_PLUS:
-				errno = handleUnaryPlus((UnaryPlusExpression)startNode, endNode, childnum);
-				break;
-			case PHPCSVNodeTypes.TYPE_UNARY_MINUS:
-				errno = handleUnaryMinus((UnaryMinusExpression)startNode, endNode, childnum);
-				break;
 			case PHPCSVNodeTypes.TYPE_CAST:
 				errno = handleCast((CastExpression)startNode, endNode, childnum);
 				break;
@@ -210,9 +197,6 @@ public class PHPCSVEdgeInterpreter implements CSVRowInterpreter
 				break;
 			case PHPCSVNodeTypes.TYPE_ISSET:
 				errno = handleIsset((IssetExpression)startNode, endNode, childnum);
-				break;
-			case PHPCSVNodeTypes.TYPE_SILENCE:
-				errno = handleSilence((SilenceExpression)startNode, endNode, childnum);
 				break;
 			case PHPCSVNodeTypes.TYPE_SHELL_EXEC:
 				errno = handleShellExec((ShellExecExpression)startNode, endNode, childnum);
@@ -311,18 +295,6 @@ public class PHPCSVEdgeInterpreter implements CSVRowInterpreter
 				break;
 			case PHPCSVNodeTypes.TYPE_BINARY_OP:
 				errno = handleBinaryOperation((BinaryOperationExpression)startNode, endNode, childnum);
-				break;
-			case PHPCSVNodeTypes.TYPE_GREATER:
-				errno = handleGreater((GreaterExpression)startNode, endNode, childnum);
-				break;
-			case PHPCSVNodeTypes.TYPE_GREATER_EQUAL:
-				errno = handleGreaterOrEqual((GreaterOrEqualExpression)startNode, endNode, childnum);
-				break;
-			case PHPCSVNodeTypes.TYPE_AND:
-				errno = handleAnd((AndExpression)startNode, endNode, childnum);
-				break;
-			case PHPCSVNodeTypes.TYPE_OR:
-				errno = handleOr((OrExpression)startNode, endNode, childnum);
 				break;
 			case PHPCSVNodeTypes.TYPE_ARRAY_ELEM:
 				errno = handleArrayElement((ArrayElement)startNode, endNode, childnum);
@@ -734,40 +706,6 @@ public class PHPCSVEdgeInterpreter implements CSVRowInterpreter
 		return errno;
 	}
 
-	private int handleUnaryPlus( UnaryPlusExpression startNode, ASTNode endNode, int childnum)
-	{
-		int errno = 0;
-
-		switch (childnum)
-		{
-			case 0: // expr child
-				startNode.setExpression((Expression)endNode);
-				break;
-
-			default:
-				errno = 1;
-		}
-
-		return errno;
-	}
-
-	private int handleUnaryMinus( UnaryMinusExpression startNode, ASTNode endNode, int childnum)
-	{
-		int errno = 0;
-
-		switch (childnum)
-		{
-			case 0: // expr child
-				startNode.setExpression((Expression)endNode);
-				break;
-
-			default:
-				errno = 1;
-		}
-
-		return errno;
-	}
-
 	private int handleCast( CastExpression startNode, ASTNode endNode, int childnum)
 	{
 		int errno = 0;
@@ -810,23 +748,6 @@ public class PHPCSVEdgeInterpreter implements CSVRowInterpreter
 		{
 			case 0: // var child
 				startNode.setVariableExpression((Expression)endNode);
-				break;
-
-			default:
-				errno = 1;
-		}
-
-		return errno;
-	}
-
-	private int handleSilence( SilenceExpression startNode, ASTNode endNode, int childnum)
-	{
-		int errno = 0;
-
-		switch (childnum)
-		{
-			case 0: // expr child
-				startNode.setExpression((Expression)endNode);
 				break;
 
 			default:
@@ -1429,86 +1350,6 @@ public class PHPCSVEdgeInterpreter implements CSVRowInterpreter
 		return errno;
 	}
 
-	private int handleGreater( GreaterExpression startNode, ASTNode endNode, int childnum)
-	{
-		int errno = 0;
-
-		switch (childnum)
-		{
-			case 0: // left child: Expression node
-				startNode.setLeft((Expression)endNode);
-				break;
-			case 1: // right child: Expression node
-				startNode.setRight((Expression)endNode);
-				break;
-
-			default:
-				errno = 1;
-		}
-
-		return errno;
-	}
-
-	private int handleGreaterOrEqual( GreaterOrEqualExpression startNode, ASTNode endNode, int childnum)
-	{
-		int errno = 0;
-
-		switch (childnum)
-		{
-			case 0: // left child: Expression node
-				startNode.setLeft((Expression)endNode);
-				break;
-			case 1: // right child: Expression node
-				startNode.setRight((Expression)endNode);
-				break;
-
-			default:
-				errno = 1;
-		}
-
-		return errno;
-	}
-
-	private int handleAnd( AndExpression startNode, ASTNode endNode, int childnum)
-	{
-		int errno = 0;
-
-		switch (childnum)
-		{
-			case 0: // left child: Expression node
-				startNode.setLeft((Expression)endNode);
-				break;
-			case 1: // right child: Expression node
-				startNode.setRight((Expression)endNode);
-				break;
-
-			default:
-				errno = 1;
-		}
-
-		return errno;
-	}
-
-	private int handleOr( OrExpression startNode, ASTNode endNode, int childnum)
-	{
-		int errno = 0;
-
-		switch (childnum)
-		{
-			case 0: // left child: Expression node
-				startNode.setLeft((Expression)endNode);
-				break;
-			case 1: // right child: Expression node
-				startNode.setRight((Expression)endNode);
-				break;
-
-			default:
-				errno = 1;
-		}
-
-		return errno;
-	}
-
 	private int handleArrayElement( ArrayElement startNode, ASTNode endNode, int childnum)
 	{
 		int errno = 0;
@@ -1629,7 +1470,7 @@ public class PHPCSVEdgeInterpreter implements CSVRowInterpreter
 		switch (childnum)
 		{
 			case 0: // name child: StringExpression node
-				startNode.setNameChild((StringExpression)endNode);
+				startNode.setNameChild((Variable)endNode);
 				break;
 			case 1: // default child: Expression or null node
 				if( endNode instanceof NullNode)
@@ -2102,8 +1943,8 @@ public class PHPCSVEdgeInterpreter implements CSVRowInterpreter
 			case 0: // exception child: Identifier node
 				startNode.setExceptionIdentifier((Identifier)endNode);
 				break;
-			case 1: // varName child: StringExpression node
-				startNode.setVariableName((StringExpression)endNode);
+			case 1: // var child: Variable node
+				startNode.setVariable((Variable)endNode);
 				break;
 			case 2: // stmts child: CompoundStatement node
 				startNode.setContent((CompoundStatement)endNode);

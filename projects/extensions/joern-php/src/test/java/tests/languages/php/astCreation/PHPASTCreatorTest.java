@@ -12,7 +12,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import ast.ASTNode;
-import ast.expressions.AndExpression;
 import ast.expressions.ArgumentList;
 import ast.expressions.ArrayIndexing;
 import ast.expressions.AssignmentExpression;
@@ -26,14 +25,11 @@ import ast.expressions.Constant;
 import ast.expressions.DoubleExpression;
 import ast.expressions.Expression;
 import ast.expressions.ExpressionList;
-import ast.expressions.GreaterExpression;
-import ast.expressions.GreaterOrEqualExpression;
 import ast.expressions.Identifier;
 import ast.expressions.IdentifierList;
 import ast.expressions.InstanceofExpression;
 import ast.expressions.IntegerExpression;
 import ast.expressions.NewExpression;
-import ast.expressions.OrExpression;
 import ast.expressions.PostDecOperationExpression;
 import ast.expressions.PostIncOperationExpression;
 import ast.expressions.PreDecOperationExpression;
@@ -41,9 +37,7 @@ import ast.expressions.PreIncOperationExpression;
 import ast.expressions.PropertyExpression;
 import ast.expressions.StaticPropertyExpression;
 import ast.expressions.StringExpression;
-import ast.expressions.UnaryMinusExpression;
 import ast.expressions.UnaryOperationExpression;
-import ast.expressions.UnaryPlusExpression;
 import ast.expressions.Variable;
 import ast.functionDef.ParameterBase;
 import ast.functionDef.ParameterList;
@@ -68,7 +62,6 @@ import ast.php.expressions.MagicConstant;
 import ast.php.expressions.PrintExpression;
 import ast.php.expressions.ReferenceExpression;
 import ast.php.expressions.ShellExecExpression;
-import ast.php.expressions.SilenceExpression;
 import ast.php.expressions.TypeHint;
 import ast.php.expressions.UnpackExpression;
 import ast.php.expressions.YieldExpression;
@@ -289,6 +282,10 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 		ASTNode node = ast.getNodeById((long)6);
 
 		assertThat( node, instanceOf(FunctionDef.class));
+		// repeat this three times... in the past, there was a bug that caused the
+		// function name to change across several invocations of getName()
+		assertEquals( "foo", ((FunctionDef)node).getName());
+		assertEquals( "foo", ((FunctionDef)node).getName());
 		assertEquals( "foo", ((FunctionDef)node).getName());
 		assertEquals( 4, node.getChildCount());
 		assertEquals( ast.getNodeById((long)9), ((FunctionDef)node).getParameterList());
@@ -627,52 +624,6 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 	}
 
 	/**
-	 * AST_UNARY_PLUS nodes are used to denote 'unary plus' operation expressions.
-	 *
-	 * Any AST_UNARY_PLUS node has exactly exactly one child, representing the expression for which
-	 * the operation is to be performed.
-	 *
-	 * This test checks a unary plus operation expression's children in the following PHP code:
-	 *
-	 * // arithmetic operators
-	 * +$x;
-	 */
-	@Test
-	public void testUnaryPlusCreation() throws IOException, InvalidCSVFile
-	{
-		handleCSVFiles( "testUnaryPlus");
-
-		ASTNode node = ast.getNodeById((long)6);
-
-		assertThat( node, instanceOf(UnaryPlusExpression.class));
-		assertEquals( 1, node.getChildCount());
-		assertEquals( ast.getNodeById((long)7), ((UnaryPlusExpression)node).getExpression());
-	}
-
-	/**
-	 * AST_UNARY_MINUS nodes are used to denote 'unary minus' operation expressions.
-	 *
-	 * Any AST_UNARY_MINUS node has exactly exactly one child, representing the expression for which
-	 * the operation is to be performed.
-	 *
-	 * This test checks a unary minus operation expression's children in the following PHP code:
-	 *
-	 * // arithmetic operators
-	 * -$x;
-	 */
-	@Test
-	public void testUnaryMinusCreation() throws IOException, InvalidCSVFile
-	{
-		handleCSVFiles( "testUnaryMinus");
-
-		ASTNode node = ast.getNodeById((long)6);
-
-		assertThat( node, instanceOf(UnaryMinusExpression.class));
-		assertEquals( 1, node.getChildCount());
-		assertEquals( ast.getNodeById((long)7), ((UnaryMinusExpression)node).getExpression());
-	}
-
-	/**
 	 * AST_CAST nodes are used to denote cast expressions.
 	 *
 	 * Any AST_CAST node has exactly exactly one child, representing the expression whose evaluation
@@ -837,36 +788,6 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 		assertThat( node2, instanceOf(IssetExpression.class));
 		assertEquals( 1, node2.getChildCount());
 		assertEquals( ast.getNodeById((long)10), ((IssetExpression)node2).getVariableExpression());
-	}
-
-	/**
-	 * AST_SILENCE nodes are used to denote 'silence' operation expressions.
-	 *
-	 * Any AST_SILENCE node has exactly exactly one child, representing the expression for which
-	 * error messages should be ignored.
-	 * See http://php.net/manual/en/language.operators.errorcontrol.php
-	 *
-	 * This test checks a few silence operation expressions' children in the following PHP code:
-	 *
-	 * // error control operators
-	 * @foo();
-	 * @$bar[42];
-	 */
-	@Test
-	public void testSilenceCreation() throws IOException, InvalidCSVFile
-	{
-		handleCSVFiles( "testSilence");
-
-		ASTNode node = ast.getNodeById((long)6);
-		ASTNode node2 = ast.getNodeById((long)11);
-
-		assertThat( node, instanceOf(SilenceExpression.class));
-		assertEquals( 1, node.getChildCount());
-		assertEquals( ast.getNodeById((long)7), ((SilenceExpression)node).getExpression());
-
-		assertThat( node2, instanceOf(SilenceExpression.class));
-		assertEquals( 1, node2.getChildCount());
-		assertEquals( ast.getNodeById((long)12), ((SilenceExpression)node2).getExpression());
 	}
 
 	/**
@@ -1056,8 +977,13 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 	 *
 	 * // bit operators
 	 * ~$foo;
+	 * // arithmetic operators
+	 * +$x;
+	 * -$x;
 	 * // boolean operators
 	 * !$foo;
+	 * // error control operators
+	 * @foo();
 	 */
 	@Test
 	public void testUnaryOperationCreation() throws IOException, InvalidCSVFile
@@ -1066,6 +992,9 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 
 		ASTNode node = ast.getNodeById((long)6);
 		ASTNode node2 = ast.getNodeById((long)9);
+		ASTNode node3 = ast.getNodeById((long)12);
+		ASTNode node4 = ast.getNodeById((long)15);
+		ASTNode node5 = ast.getNodeById((long)18);
 
 		assertThat( node, instanceOf(UnaryOperationExpression.class));
 		assertEquals( 1, node.getChildCount());
@@ -1074,6 +1003,18 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 		assertThat( node2, instanceOf(UnaryOperationExpression.class));
 		assertEquals( 1, node2.getChildCount());
 		assertEquals( ast.getNodeById((long)10), ((UnaryOperationExpression)node2).getExpression());
+		
+		assertThat( node3, instanceOf(UnaryOperationExpression.class));
+		assertEquals( 1, node3.getChildCount());
+		assertEquals( ast.getNodeById((long)13), ((UnaryOperationExpression)node3).getExpression());
+		
+		assertThat( node4, instanceOf(UnaryOperationExpression.class));
+		assertEquals( 1, node4.getChildCount());
+		assertEquals( ast.getNodeById((long)16), ((UnaryOperationExpression)node4).getExpression());
+		
+		assertThat( node5, instanceOf(UnaryOperationExpression.class));
+		assertEquals( 1, node5.getChildCount());
+		assertEquals( ast.getNodeById((long)19), ((UnaryOperationExpression)node5).getExpression());
 	}
 
 	/**
@@ -1219,17 +1160,17 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 	{
 		handleCSVFiles( "testGlobal");
 
-		ASTNode node = ast.getNodeById((long)13);
-		ASTNode node2 = ast.getNodeById((long)16);
+		ASTNode node = ast.getNodeById((long)12);
+		ASTNode node2 = ast.getNodeById((long)15);
 
 		assertThat( node, instanceOf(GlobalStatement.class));
 		assertEquals( 1, node.getChildCount());
-		assertEquals( ast.getNodeById((long)14), ((GlobalStatement)node).getVariable());
+		assertEquals( ast.getNodeById((long)13), ((GlobalStatement)node).getVariable());
 		assertEquals( "bar", ((GlobalStatement)node).getVariable().getNameExpression().getEscapedCodeStr());
 
 		assertThat( node2, instanceOf(GlobalStatement.class));
 		assertEquals( 1, node2.getChildCount());
-		assertEquals( ast.getNodeById((long)17), ((GlobalStatement)node2).getVariable());
+		assertEquals( ast.getNodeById((long)16), ((GlobalStatement)node2).getVariable());
 		assertEquals( "buz", ((GlobalStatement)node2).getVariable().getNameExpression().getEscapedCodeStr());
 	}
 
@@ -1248,21 +1189,21 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 	{
 		handleCSVFiles( "testUnset");
 
-		ASTNode node = ast.getNodeById((long)7);
-		ASTNode node2 = ast.getNodeById((long)10);
-		ASTNode node3 = ast.getNodeById((long)15);
+		ASTNode node = ast.getNodeById((long)6);
+		ASTNode node2 = ast.getNodeById((long)9);
+		ASTNode node3 = ast.getNodeById((long)14);
 
 		assertThat( node, instanceOf(UnsetStatement.class));
 		assertEquals( 1, node.getChildCount());
-		assertEquals( ast.getNodeById((long)8), ((UnsetStatement)node).getVariableExpression());
+		assertEquals( ast.getNodeById((long)7), ((UnsetStatement)node).getVariableExpression());
 
 		assertThat( node2, instanceOf(UnsetStatement.class));
 		assertEquals( 1, node2.getChildCount());
-		assertEquals( ast.getNodeById((long)11), ((UnsetStatement)node2).getVariableExpression());
+		assertEquals( ast.getNodeById((long)10), ((UnsetStatement)node2).getVariableExpression());
 
 		assertThat( node3, instanceOf(UnsetStatement.class));
 		assertEquals( 1, node3.getChildCount());
-		assertEquals( ast.getNodeById((long)16), ((UnsetStatement)node3).getVariableExpression());
+		assertEquals( ast.getNodeById((long)15), ((UnsetStatement)node3).getVariableExpression());
 	}
 
 	/**
@@ -1398,17 +1339,17 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 	{
 		handleCSVFiles( "testEcho");
 
-		ASTNode node = ast.getNodeById((long)7);
-		ASTNode node2 = ast.getNodeById((long)9);
+		ASTNode node = ast.getNodeById((long)6);
+		ASTNode node2 = ast.getNodeById((long)8);
 
 		assertThat( node, instanceOf(EchoStatement.class));
 		assertEquals( 1, node.getChildCount());
-		assertEquals( ast.getNodeById((long)8), ((EchoStatement)node).getEchoExpression());
+		assertEquals( ast.getNodeById((long)7), ((EchoStatement)node).getEchoExpression());
 		assertEquals( "Hello World!", ((EchoStatement)node).getEchoExpression().getEscapedCodeStr());
 
 		assertThat( node2, instanceOf(EchoStatement.class));
 		assertEquals( 1, node2.getChildCount());
-		assertEquals( ast.getNodeById((long)10), ((EchoStatement)node2).getEchoExpression());
+		assertEquals( ast.getNodeById((long)9), ((EchoStatement)node2).getEchoExpression());
 		assertEquals( "PHP_EOL", ((Constant)((EchoStatement)node2).getEchoExpression()).getIdentifier().getNameChild().getEscapedCodeStr());
 	}
 
@@ -1895,6 +1836,8 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 	 * $x ** $y;
 	 * // boolean operators
 	 * $x xor $y;
+	 * $x && $y;
+	 * $x || $y;
 	 * // comparison operators
 	 * $x === $y;
 	 * $x !== $y;
@@ -1903,6 +1846,8 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 	 * $x < $y;
 	 * $x <= $y;
 	 * $x <=> $y;
+	 * $x > $y;
+	 * $x >= $y;
 	 */
 	@Test
 	public void testBinaryOperationCreation() throws IOException, InvalidCSVFile
@@ -1929,6 +1874,10 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 		ASTNode node18 = ast.getNodeById((long)91);
 		ASTNode node19 = ast.getNodeById((long)96);
 		ASTNode node20 = ast.getNodeById((long)101);
+		ASTNode node21 = ast.getNodeById((long)106);
+		ASTNode node22 = ast.getNodeById((long)111);
+		ASTNode node23 = ast.getNodeById((long)116);
+		ASTNode node24 = ast.getNodeById((long)121);
 
 		assertThat( node, instanceOf(BinaryOperationExpression.class));
 		assertEquals( 2, node.getChildCount());
@@ -2029,118 +1978,26 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 		assertEquals( 2, node20.getChildCount());
 		assertEquals( ast.getNodeById((long)102), ((BinaryOperationExpression)node20).getLeft());
 		assertEquals( ast.getNodeById((long)104), ((BinaryOperationExpression)node20).getRight());
-	}
+		
+		assertThat( node21, instanceOf(BinaryOperationExpression.class));
+		assertEquals( 2, node21.getChildCount());
+		assertEquals( ast.getNodeById((long)107), ((BinaryOperationExpression)node21).getLeft());
+		assertEquals( ast.getNodeById((long)109), ((BinaryOperationExpression)node21).getRight());
+		
+		assertThat( node22, instanceOf(BinaryOperationExpression.class));
+		assertEquals( 2, node22.getChildCount());
+		assertEquals( ast.getNodeById((long)112), ((BinaryOperationExpression)node22).getLeft());
+		assertEquals( ast.getNodeById((long)114), ((BinaryOperationExpression)node22).getRight());		
+		
+		assertThat( node23, instanceOf(BinaryOperationExpression.class));
+		assertEquals( 2, node23.getChildCount());
+		assertEquals( ast.getNodeById((long)117), ((BinaryOperationExpression)node23).getLeft());
+		assertEquals( ast.getNodeById((long)119), ((BinaryOperationExpression)node23).getRight());		
 
-	/**
-	 * AST_GREATER nodes are used to denote binary operation "greater than" expressions.
-	 *
-	 * TODO once version 20 of Niki's php-ast extension is stable, update phpjoern parser and make
-	 * this a normal AST_BINARY_OP node.
-	 *
-	 * Any AST_GREATER node has exactly two children:
-	 * 1) an expression on the left-hand side
-	 * 2) an expression on the right-hand side
-	 *
-	 * This test checks a "greater than" expression's children in the following PHP code:
-	 *
-	 * // comparison operators
-	 * $x > $y;
-	 */
-	@Test
-	public void testGreaterCreation() throws IOException, InvalidCSVFile
-	{
-		handleCSVFiles( "testGreater");
-
-		ASTNode node = ast.getNodeById((long)6);
-
-		assertThat( node, instanceOf(GreaterExpression.class));
-		assertEquals( 2, node.getChildCount());
-		assertEquals( ast.getNodeById((long)7), ((GreaterExpression)node).getLeft());
-		assertEquals( ast.getNodeById((long)9), ((GreaterExpression)node).getRight());
-	}
-
-	/**
-	 * AST_GREATER_EQUAL nodes are used to denote binary operation "greater or equal than" expressions.
-	 *
-	 * TODO once version 20 of Niki's php-ast extension is stable, update phpjoern parser and make
-	 * this a normal AST_BINARY_OP node.
-	 *
-	 * Any AST_GREATER_EQUAL node has exactly two children:
-	 * 1) an expression on the left-hand side
-	 * 2) an expression on the right-hand side
-	 *
-	 * This test checks a "greater or equal than" expression's children in the following PHP code:
-	 *
-	 * // comparison operators
-	 * $x >= $y;
-	 */
-	@Test
-	public void testGreaterOrEqualCreation() throws IOException, InvalidCSVFile
-	{
-		handleCSVFiles( "testGreaterOrEqual");
-
-		ASTNode node = ast.getNodeById((long)6);
-
-		assertThat( node, instanceOf(GreaterOrEqualExpression.class));
-		assertEquals( 2, node.getChildCount());
-		assertEquals( ast.getNodeById((long)7), ((GreaterOrEqualExpression)node).getLeft());
-		assertEquals( ast.getNodeById((long)9), ((GreaterOrEqualExpression)node).getRight());
-	}
-
-	/**
-	 * AST_AND nodes are used to denote binary operation "boolean and" expressions.
-	 *
-	 * TODO once version 20 of Niki's php-ast extension is stable, update phpjoern parser and make
-	 * this a normal AST_BINARY_OP node.
-	 *
-	 * Any AST_AND node has exactly two children:
-	 * 1) an expression on the left-hand side
-	 * 2) an expression on the right-hand side
-	 *
-	 * This test checks a "boolean and" expression's children in the following PHP code:
-	 *
-	 * // boolean operators
-	 * $x && $y;
-	 */
-	@Test
-	public void testAndCreation() throws IOException, InvalidCSVFile
-	{
-		handleCSVFiles( "testAnd");
-
-		ASTNode node = ast.getNodeById((long)6);
-
-		assertThat( node, instanceOf(AndExpression.class));
-		assertEquals( 2, node.getChildCount());
-		assertEquals( ast.getNodeById((long)7), ((AndExpression)node).getLeft());
-		assertEquals( ast.getNodeById((long)9), ((AndExpression)node).getRight());
-	}
-
-	/**
-	 * AST_OR nodes are used to denote binary operation "boolean or" expressions.
-	 *
-	 * TODO once version 20 of Niki's php-ast extension is stable, update phpjoern parser and make
-	 * this a normal AST_BINARY_OP node.
-	 *
-	 * Any AST_OR node has exactly two children:
-	 * 1) an expression on the left-hand side
-	 * 2) an expression on the right-hand side
-	 *
-	 * This test checks a "boolean or" expression's children in the following PHP code:
-	 *
-	 * // boolean operators
-	 * $x || $y;
-	 */
-	@Test
-	public void testOrCreation() throws IOException, InvalidCSVFile
-	{
-		handleCSVFiles( "testOr");
-
-		ASTNode node = ast.getNodeById((long)6);
-
-		assertThat( node, instanceOf(OrExpression.class));
-		assertEquals( 2, node.getChildCount());
-		assertEquals( ast.getNodeById((long)7), ((OrExpression)node).getLeft());
-		assertEquals( ast.getNodeById((long)9), ((OrExpression)node).getRight());
+		assertThat( node24, instanceOf(BinaryOperationExpression.class));
+		assertEquals( 2, node24.getChildCount());
+		assertEquals( ast.getNodeById((long)122), ((BinaryOperationExpression)node24).getLeft());
+		assertEquals( ast.getNodeById((long)124), ((BinaryOperationExpression)node24).getRight());
 	}
 
 	/**
@@ -2359,7 +2216,7 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 	 * See http://php.net/manual/en/language.variables.scope.php#language.variables.scope.static
 	 *
 	 * Any AST_STATIC node has exactly two children:
-	 * 1) string, indicating the static variable's name
+	 * 1) AST_VAR, containing the static variable's name
 	 * 2) various possible child types, representing the default value
 	 *    (e.g., node type could be "NULL", "string", "integer", but also AST_CONST, etc.)
 	 *
@@ -2374,28 +2231,28 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 	{
 		handleCSVFiles( "testStatic");
 
-		ASTNode node = ast.getNodeById((long)13);
+		ASTNode node = ast.getNodeById((long)12);
 		ASTNode node2 = ast.getNodeById((long)16);
-		ASTNode node3 = ast.getNodeById((long)19);
+		ASTNode node3 = ast.getNodeById((long)20);
 
 		assertThat( node, instanceOf(StaticVariableDeclaration.class));
 		assertEquals( 2, node.getChildCount());
-		assertEquals( ast.getNodeById((long)14), ((StaticVariableDeclaration)node).getNameChild());
-		assertEquals( "bar", ((StaticVariableDeclaration)node).getNameChild().getEscapedCodeStr());
+		assertEquals( ast.getNodeById((long)13), ((StaticVariableDeclaration)node).getNameChild());
+		assertEquals( "bar", ((StaticVariableDeclaration)node).getNameChild().getNameExpression().getEscapedCodeStr());
 		assertNull( ((StaticVariableDeclaration)node).getDefault());
 
 		assertThat( node2, instanceOf(StaticVariableDeclaration.class));
 		assertEquals( 2, node2.getChildCount());
 		assertEquals( ast.getNodeById((long)17), ((StaticVariableDeclaration)node2).getNameChild());
-		assertEquals( "buz", ((StaticVariableDeclaration)node2).getNameChild().getEscapedCodeStr());
-		assertEquals( ast.getNodeById((long)18), ((StaticVariableDeclaration)node2).getDefault());
+		assertEquals( "buz", ((StaticVariableDeclaration)node2).getNameChild().getNameExpression().getEscapedCodeStr());
+		assertEquals( ast.getNodeById((long)19), ((StaticVariableDeclaration)node2).getDefault());
 		assertEquals( "42", ((StaticVariableDeclaration)node2).getDefault().getEscapedCodeStr());
 
 		assertThat( node3, instanceOf(StaticVariableDeclaration.class));
 		assertEquals( 2, node3.getChildCount());
-		assertEquals( ast.getNodeById((long)20), ((StaticVariableDeclaration)node3).getNameChild());
-		assertEquals( "qux", ((StaticVariableDeclaration)node3).getNameChild().getEscapedCodeStr());
-		assertEquals( ast.getNodeById((long)21), ((StaticVariableDeclaration)node3).getDefault());
+		assertEquals( ast.getNodeById((long)21), ((StaticVariableDeclaration)node3).getNameChild());
+		assertEquals( "qux", ((StaticVariableDeclaration)node3).getNameChild().getNameExpression().getEscapedCodeStr());
+		assertEquals( ast.getNodeById((long)23), ((StaticVariableDeclaration)node3).getDefault());
 		assertEquals( "norf", ((Identifier)((CallExpressionBase)((StaticVariableDeclaration)node3).getDefault()).getTargetFunc()).getNameChild().getEscapedCodeStr());
 	}
 
@@ -3200,7 +3057,7 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 		assertEquals( 3, node.getChildCount());
 		assertEquals( ast.getNodeById((long)7), ((TryStatement)node).getContent());
 		assertEquals( ast.getNodeById((long)8), ((TryStatement)node).getCatchList());
-		assertEquals( ast.getNodeById((long)19), ((TryStatement)node).getFinallyContent());
+		assertEquals( ast.getNodeById((long)21), ((TryStatement)node).getFinallyContent());
 	}
 
 	/**
@@ -3224,25 +3081,27 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 		handleCSVFiles( "testTry");
 
 		ASTNode node = ast.getNodeById((long)9);
-		ASTNode node2 = ast.getNodeById((long)14);
+		ASTNode node2 = ast.getNodeById((long)15);
 
 		assertThat( node, instanceOf(CatchStatement.class));
 		assertEquals( 3, node.getChildCount());
 		assertEquals( ast.getNodeById((long)10), ((CatchStatement)node).getExceptionIdentifier());
 		assertEquals( ast.getNodeById((long)11), ((CatchStatement)node).getExceptionIdentifier().getNameChild());
 		assertEquals( "FooException", ((CatchStatement)node).getExceptionIdentifier().getNameChild().getEscapedCodeStr());
-		assertEquals( ast.getNodeById((long)12), ((CatchStatement)node).getVariableName());
-		assertEquals( "f", ((CatchStatement)node).getVariableName().getEscapedCodeStr());
-		assertEquals( ast.getNodeById((long)13), ((CatchStatement)node).getContent());
+		assertEquals( ast.getNodeById((long)12), ((CatchStatement)node).getVariable());
+		assertEquals( ast.getNodeById((long)13), ((CatchStatement)node).getVariable().getNameExpression());
+		assertEquals( "f", ((CatchStatement)node).getVariable().getNameExpression().getEscapedCodeStr());
+		assertEquals( ast.getNodeById((long)14), ((CatchStatement)node).getContent());
 
 		assertThat( node2, instanceOf(CatchStatement.class));
 		assertEquals( 3, node2.getChildCount());
-		assertEquals( ast.getNodeById((long)15), ((CatchStatement)node2).getExceptionIdentifier());
-		assertEquals( ast.getNodeById((long)16), ((CatchStatement)node2).getExceptionIdentifier().getNameChild());
+		assertEquals( ast.getNodeById((long)16), ((CatchStatement)node2).getExceptionIdentifier());
+		assertEquals( ast.getNodeById((long)17), ((CatchStatement)node2).getExceptionIdentifier().getNameChild());
 		assertEquals( "BarException", ((CatchStatement)node2).getExceptionIdentifier().getNameChild().getEscapedCodeStr());
-		assertEquals( ast.getNodeById((long)17), ((CatchStatement)node2).getVariableName());
-		assertEquals( "b", ((CatchStatement)node2).getVariableName().getEscapedCodeStr());
-		assertEquals( ast.getNodeById((long)18), ((CatchStatement)node2).getContent());
+		assertEquals( ast.getNodeById((long)18), ((CatchStatement)node2).getVariable());
+		assertEquals( ast.getNodeById((long)19), ((CatchStatement)node2).getVariable().getNameExpression());
+		assertEquals( "b", ((CatchStatement)node2).getVariable().getNameExpression().getEscapedCodeStr());
+		assertEquals( ast.getNodeById((long)20), ((CatchStatement)node2).getContent());
 	}
 
 	/**
@@ -3695,7 +3554,7 @@ public class PHPASTCreatorTest extends PHPCSVBasedTest
 		assertEquals( 2, ((CatchList)node).size());
 
 		assertEquals( ast.getNodeById((long)9), ((CatchList)node).getCatchStatement(0));
-		assertEquals( ast.getNodeById((long)14), ((CatchList)node).getCatchStatement(1));
+		assertEquals( ast.getNodeById((long)15), ((CatchList)node).getCatchStatement(1));
 		for( CatchStatement catchstatement : (CatchList)node)
 			assertTrue( ast.containsValue(catchstatement));
 	}
